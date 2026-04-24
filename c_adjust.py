@@ -22,7 +22,7 @@ import numpy as np
 MIN_OFFSET_M = 1.0
 MAX_OFFSET_M = 20.0
 EARTH_RADIUS_M = 6371000.0  # mean Earth radius
-OUTPUT_DECIMALS = 5  # round final lat/lon to 5 decimal places
+OUTPUT_DECIMALS = 4  # round final lat/lon to 4 decimal places
 
 def list_data_files(folder="."):
     exts = (".xlsx", ".xls", ".csv")
