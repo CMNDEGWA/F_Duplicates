@@ -95,15 +95,17 @@ def find_duplicates_on_columns(df: pd.DataFrame, cols: List[str]) -> pd.DataFram
     for c in cols:
         if df2[c].dtype == object:
             df2[c] = df2[c].astype(str).str.strip()
-    key = df2[cols].astype(str).agg("||".join, axis=1)
+    key = df2[cols].astype(str).apply(lambda x: "||".join(x), axis=1)
     dup_mask = key.duplicated(keep=False)
     result = df.loc[dup_mask].copy()
+    if isinstance(result, pd.Series):
+        result = result.to_frame()  # Convert to DataFrame if needed (rare edge case)
     return result
 
 def browse_for_file(start_dir: Path = Path.cwd()) -> Optional[Path]:
     cur = start_dir.resolve()
     while True:
-        print_header("Choose Excel file (navigate folders). Type 'back' to cancel.")
+        print_header("Choose file (navigate folders). Type 'back' to cancel.")
         dirs = [p for p in cur.iterdir() if p.is_dir()]
         files = [p for p in cur.iterdir() if p.is_file()]
         dirs.sort()
@@ -118,12 +120,12 @@ def browse_for_file(start_dir: Path = Path.cwd()) -> Optional[Path]:
         file_map = {}
         fcount = 0
         for f in files:
-            if f.suffix.lower() in (".xlsx", ".xlsm", ".xls"):
+            if f.suffix.lower() in (".xlsx", ".xlsm", ".xls", ".csv"):
                 fcount += 1
                 print(f"  F{fcount:>2}: {f.name}")
                 file_map[fcount] = f
         if fcount == 0:
-            print("  (No Excel files in this folder)")
+            print("  (No supported files in this folder)")
         print()
         print("Commands:")
         print("  cd <D#>   - enter directory number (e.g., cd D1)")
@@ -226,8 +228,10 @@ def save_duplicates_and_sorted(df: pd.DataFrame, duplicates: pd.DataFrame, selec
         # 1) Save a copy of the original file next to the original: <name>.orig.<ext>
         orig_backup = orig_path.with_name(orig_path.stem + ".orig" + orig_path.suffix)
         try:
-            # Try writing data to Excel backup (data-only)
-            df.to_excel(orig_backup, index=False, engine="openpyxl")
+            if orig_path.suffix.lower() == ".csv":
+                df.to_csv(orig_backup, index=False)
+            else:
+                df.to_excel(orig_backup, index=False, engine="openpyxl")
         except Exception:
             # fallback: binary copy
             from shutil import copy2
@@ -244,16 +248,17 @@ def save_duplicates_and_sorted(df: pd.DataFrame, duplicates: pd.DataFrame, selec
         for c in selected_columns:
             if df2[c].dtype == object:
                 df2[c] = df2[c].astype(str).str.strip()
-        key = df2[selected_columns].astype(str).agg("||".join, axis=1)
+        key = df2[selected_columns].astype(str).apply(lambda x: "||".join(x), axis=1)
         dup_mask = key.duplicated(keep=False)
         kept = df.loc[~dup_mask].copy()
         if not kept.empty:
             try:
-                kept_sorted = kept.sort_values(by=selected_columns, kind="stable")
+                kept_sorted = kept.sort_values(by=selected_columns)  # type: ignore[arg-type]
             except Exception:
                 kept_sorted = kept
         else:
             kept_sorted = kept
+        assert isinstance(kept_sorted, pd.DataFrame), "Expected DataFrame"
         sorted_name = Path.cwd() / f"{orig_path.stem}-sorted.csv"
         kept_to_save = format_latlon_in_df(kept_sorted.copy())
         kept_to_save.to_csv(sorted_name, index=False)
@@ -271,7 +276,7 @@ def save_duplicates_and_sorted(df: pd.DataFrame, duplicates: pd.DataFrame, selec
 def main_menu():
     while True:
         print_header("Main Menu")
-        print("1) Select Excel file")
+        print("1) Select file")
         print("2) Quit")
         choice = input("\nChoose an option: ").strip()
         if choice == "1":
@@ -279,10 +284,13 @@ def main_menu():
             if file_path is None:
                 continue
             try:
-                df = pd.read_excel(file_path, engine="openpyxl")
+                if file_path.suffix.lower() == ".csv":
+                    df = pd.read_csv(file_path)
+                else:
+                    df = pd.read_excel(file_path, engine="openpyxl")
             except Exception as e:
                 print_header("Error reading file")
-                print("Failed to open Excel file:", e)
+                print("Failed to open file:", e)
                 pause()
                 continue
             cols = display_columns_and_choose(df)
