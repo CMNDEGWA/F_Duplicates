@@ -1,13 +1,15 @@
-Short description
+## Project Explained in Detail
 
-    Finds duplicate rows by Code and by exact coordinate pairs (Latitude + Longitude) in an Excel (.xlsx) file.
+### Description
+
+This program finds duplicate rows by Code and by exact coordinate pairs (Latitude + Longitude) in an Excel (.xlsx) file.
     Writes two CSV outputs:
         duplicates_by_code.csv — all rows where the Code value appears more than once.
         duplicates_by_coordinate.csv — all rows where both Latitude and Longitude match exactly; Latitude/Longitude in the CSV are rounded/formatted to 5 decimal places.
 
 Requirements
 
-    Python 3.8+
+Python 3.8+
     pandas, openpyxl
         Install: pip install pandas openpyxl
 
