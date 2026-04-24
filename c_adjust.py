@@ -2,9 +2,12 @@
 """
 Adjust duplicate coordinates (lat, lon) by random offsets between 1 and 20 meters.
 Terminal-based file selection menu and summary output.
+Saves adjusted coordinates rounded to 5 decimal places.
 
 Dependencies:
   pip install pandas openpyxl numpy
+Usage:
+  python3 adjust_duplicates.py
 """
 
 import os
@@ -19,6 +22,7 @@ import numpy as np
 MIN_OFFSET_M = 1.0
 MAX_OFFSET_M = 20.0
 EARTH_RADIUS_M = 6371000.0  # mean Earth radius
+OUTPUT_DECIMALS = 5  # round final lat/lon to 5 decimal places
 
 def list_data_files(folder="."):
     exts = (".xlsx", ".xls", ".csv")
@@ -50,29 +54,24 @@ def load_file(path):
     return df
 
 def ensure_latlon_columns(df):
-    # Try common names; require at least two columns that look like lat/lon
     cols = [c for c in df.columns]
     lower = [c.lower() for c in cols]
     lat_candidates = [cols[i] for i, c in enumerate(lower) if "lat" in c]
     lon_candidates = [cols[i] for i, c in enumerate(lower) if "lon" in c or "lng" in c or "long" in c]
     if lat_candidates and lon_candidates:
         return lat_candidates[0], lon_candidates[0]
-    # fallback: if exactly two numeric columns aside from code, take them
     numeric_cols = [c for c in cols if pd.api.types.is_numeric_dtype(df[c])]
     if len(numeric_cols) >= 2:
         return numeric_cols[0], numeric_cols[1]
-    raise ValueError("Could not detect latitude/longitude columns. Make sure column names include 'lat' and 'lon' or file contains numeric lat/lon columns.")
+    raise ValueError("Could not detect latitude/longitude columns. Ensure column names include 'lat' and 'lon' or file contains numeric lat/lon columns.")
 
 def meters_to_dlat_dlon(lat_deg, meters_north, meters_east):
-    # converts small displacements in meters to delta degrees
     lat_rad = math.radians(lat_deg)
     dlat = (meters_north / EARTH_RADIUS_M) * (180.0 / math.pi)
     dlon = (meters_east / (EARTH_RADIUS_M * math.cos(lat_rad))) * (180.0 / math.pi)
     return dlat, dlon
 
 def offset_point(lat, lon, offset_m, bearing_deg):
-    # Returns new lat, lon after moving offset_m at bearing_deg from original point.
-    # Use small-angle approximation by converting meters into north/east components.
     bearing_rad = math.radians(bearing_deg)
     meters_north = offset_m * math.cos(bearing_rad)
     meters_east = offset_m * math.sin(bearing_rad)
@@ -83,17 +82,16 @@ def adjust_duplicates(df, lat_col, lon_col, seed=None):
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
-    coords = df[[lat_col, lon_col]].round(8)  # rounding to avoid float noise when detecting duplicates
-    # find groups of identical coordinates
+    # Use rounded values to detect true duplicates while preserving original precision for offsets
+    coords = df[[lat_col, lon_col]].round(8)
     grouped = coords.groupby([lat_col, lon_col]).indices
-    # Prepare new columns
+    # Create mutable copies of lat/lon arrays to allow element assignment
     new_lats = df[lat_col].astype(float).to_numpy().copy()
     new_lons = df[lon_col].astype(float).to_numpy().copy()
     n_adjusted = 0
     for (lat_val, lon_val), indices in grouped.items():
         if len(indices) <= 1:
             continue
-        # For the first occurrence keep it unchanged, adjust the rest
         for idx_in_group, row_idx in enumerate(indices):
             if idx_in_group == 0:
                 continue
@@ -104,8 +102,9 @@ def adjust_duplicates(df, lat_col, lon_col, seed=None):
             new_lons[row_idx] = new_lon
             n_adjusted += 1
     df_out = df.copy()
-    df_out[lat_col] = new_lats
-    df_out[lon_col] = new_lons
+    # Round final coordinates to required decimals
+    df_out[lat_col] = np.round(new_lats.astype(float), OUTPUT_DECIMALS)
+    df_out[lon_col] = np.round(new_lons.astype(float), OUTPUT_DECIMALS)
     return df_out, n_adjusted
 
 def main():
@@ -122,10 +121,9 @@ def main():
         sys.exit(1)
     print(f"Detected latitude column: '{lat_col}', longitude column: '{lon_col}'")
     total_rows = len(df)
-    # Count duplicates
     coord_counts = df.groupby([lat_col, lon_col]).size().reset_index(name="count")
     dup_groups = coord_counts[coord_counts["count"] > 1]
-    total_duplicate_rows = int(dup_groups["count"].sum())
+    total_duplicate_rows = int(dup_groups["count"].sum()) if not dup_groups.empty else 0
     total_duplicate_groups = len(dup_groups)
     print(f"Rows: {total_rows}, Duplicate groups: {total_duplicate_groups}, Duplicate rows (including originals): {total_duplicate_rows}")
     if total_duplicate_groups == 0:
