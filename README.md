@@ -1,6 +1,25 @@
 ## Duplicate Coordinate Finder and Adjuster
 
-### Description
+### Description for find_duplicates.py
+
+This program finds duplicate rows by Code and by exact coordinate pairs (Latitude + Longitude) in an Excel (.xlsx) file.
+    Writes two CSV outputs:
+        duplicates_by_code.csv — all rows where the Code value appears more than once.
+        duplicates_by_coordinate.csv — all rows where both Latitude and Longitude match exactly; Latitude/Longitude in the CSV are rounded/formatted to 5 decimal places.
+
+Requirements
+
+Python 3.8+
+    pandas, openpyxl
+        Install: pip install pandas openpyxl
+
+Usage
+
+    Basic: python find_duplicates_coordinates.py input.xlsx
+    Specify output filenames and precision: python find_duplicates_coordinates.py input.xlsx duplicates_by_code.csv duplicates_by_coordinate.csv 5
+
+
+### Description for Full-Stack.py
 
 This program processes CSV or Excel files to find and resolve duplicate coordinate rows based on latitude and longitude. It detects duplicates by exact coordinate matches (rounded to 8 decimal places for precision), adjusts duplicate positions by random geodesic offsets (1-100 meters) to avoid collisions, and iterates until no duplicates remain or a maximum iteration limit is reached. Outputs include the initial duplicates and the final merged file with unique coordinates.
 
@@ -52,3 +71,4 @@ The script supports CSV and Excel files (.xlsx, .xls, .xlsm).
 ### License
 
 Use freely; no warranty.
+
