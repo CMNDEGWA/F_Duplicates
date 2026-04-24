@@ -222,7 +222,10 @@ def process_file(file_path: Path) -> None:
     # Find initial duplicates
     initial_groups = find_duplicate_groups(df, lat_col, lon_col)
     if initial_groups:
-        initial_duplicates = df.loc[sorted([idx for indices in initial_groups.values() for idx in indices])]
+        initial_duplicates = df.loc[sorted([idx for indices in initial_groups.values() for idx in indices])].copy()
+        # Round coordinates to 4 decimals
+        initial_duplicates[lat_col] = initial_duplicates[lat_col].round(OUTPUT_DECIMALS)
+        initial_duplicates[lon_col] = initial_duplicates[lon_col].round(OUTPUT_DECIMALS)
         initial_dup_path = file_path.with_name(file_path.stem + "_initial_duplicates.csv")
         initial_duplicates.to_csv(initial_dup_path, index=False)
         print(f"Saved initial duplicates: {initial_dup_path}")
@@ -249,14 +252,7 @@ def process_file(file_path: Path) -> None:
     df.to_csv(merged_path, index=False) if file_path.suffix.lower() == ".csv" else df.to_excel(merged_path, index=False, engine="openpyxl")
     print(f"Saved merged file: {merged_path}")
 
-    # Save duplicate file (mapping of adjustments)
-    if all_mappings:
-        mapping_df = pd.DataFrame(all_mappings)
-        duplicate_path = file_path.with_name(file_path.stem + "_duplicates.csv")
-        mapping_df.to_csv(duplicate_path, index=False)
-        print(f"Saved duplicates file: {duplicate_path}")
-    else:
-        print("No duplicates were adjusted.")
+    # Note: Duplicate adjustments mapping not saved as per requirements
 
 def main():
     print("Duplicate Coordinate Finder and Adjuster")
