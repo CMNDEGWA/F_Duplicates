@@ -6,3 +6,7 @@ NP/duplicates_Latitude_Longitude.csv
 .gitignore
 NP/KTF-Nyankoba-Full-sorted.csv
 NP/KTF-Nyankoba-Full.orig.xlsx
+Duplicates_Lat&Long_adjusted.xlsx
+Lat&Long_adjusted-sorted.csv
+.gitignore
+Nyankoba_Corrected_Coordinates.csv
