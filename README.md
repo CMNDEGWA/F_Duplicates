@@ -38,8 +38,10 @@ Key features:
 
 ### Usage
 
-- **Interactive mode**: Run `python Full-Stack.py` and use the file browser to select a file.
-- **Command-line mode**: `python Full-Stack.py path/to/file.csv` (or .xlsx).
+- **Interactive mode**: Run `python Full-Stack.py` and use the file browser to select a file. Columns are auto-detected or prompted for selection.
+- **Command-line mode**: 
+  - `python Full-Stack.py path/to/file.csv` (auto-detect or prompt for columns).
+  - `python Full-Stack.py path/to/file.xlsx lat_column lon_column` (specify column names explicitly).
 
 The script supports CSV and Excel files (.xlsx, .xls, .xlsm).
 
